@@ -2,7 +2,6 @@
 
 import os
 import pandas as pd
-import matplotlib.pyplot as plt
 
 def symbol_to_path(symbol, base_dir=None):
     """Return CSV file path given ticker symbol."""
@@ -27,6 +26,7 @@ def get_data(symbols, dates, addSPY=True, colname = 'Adj Close'):
     return df
 
 def plot_data(df, title="Stock prices", xlabel="Date", ylabel="Price"):
+    import matplotlib.pyplot as plt
     """Plot stock prices with a custom title and meaningful axis labels."""
     ax = df.plot(title=title, fontsize=12)
     ax.set_xlabel(xlabel)
