@@ -42,8 +42,8 @@ best4_test_cases = [
         seed=1489683274
         ),
     Best4TestCase(
-        description="Test Case 2: Best4RT",
-        group="best4rt",
+        description="Test Case 2: Best4DT",
+        group="best4dt",
         max_tests=15,
         needed_wins=10,
         row_limits=(10,1000),
@@ -96,11 +96,11 @@ def test_learners(description, group, max_tests, needed_wins, row_limits, col_li
                 msgs.append("   Exception occured when calling author() method: {}".format(e))
                 points_earned = -10
         else:
-            if group=="best4rt":
-                from gen_data import best4RT
-                dataX, dataY = run_with_timeout(best4RT,seconds_per_test_case,(),{'seed':seed})
-                same_dataX,same_dataY = run_with_timeout(best4RT,seconds_per_test_case,(),{'seed':seed})
-                diff_dataX,diff_dataY = run_with_timeout(best4RT,seconds_per_test_case,(),{'seed':seed+1})
+            if group=="best4dt":
+                from gen_data import best4DT
+                dataX, dataY = run_with_timeout(best4DT,seconds_per_test_case,(),{'seed':seed})
+                same_dataX,same_dataY = run_with_timeout(best4DT,seconds_per_test_case,(),{'seed':seed})
+                diff_dataX,diff_dataY = run_with_timeout(best4DT,seconds_per_test_case,(),{'seed':seed+1})
                 betterLearner = DTLearner
                 worseLearner = LinRegLearner
             elif group=='best4lr':
@@ -176,7 +176,7 @@ def test_learners(description, group, max_tests, needed_wins, row_limits, col_li
                 for we,be in worse_better_err[:10]:
                     avg_ratio += (float(we) - float(be))
                 avg_ratio = avg_ratio/10.0
-                if group=="best4rt":
+                if group=="best4dt":
                     grader.add_performance(np.array([avg_ratio,0]))
                 else:
                     grader.add_performance(np.array([0,avg_ratio]))
