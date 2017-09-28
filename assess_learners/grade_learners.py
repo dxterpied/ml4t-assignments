@@ -314,17 +314,17 @@ def test_learners(description, group, datafile, seed, outputs, grader):
             corr_in_50 = np.corrcoef(predY_in_50,y=trainY)[0,1]
             incorrect = False
 
-            if corr_in < outputs['insample_corr_min']:
+            if corr_in < outputs['insample_corr_min'] or np.isnan(corr_in):
                 incorrect = True
                 msgs.append("    In-sample with leaf_size=1 correlation less than allowed: got {} expected {}".format(corr_in,outputs['insample_corr_min']))
             else:
                 points_earned += 1.0
-            if corr_out < outputs['outsample_corr_min']:
+            if corr_out < outputs['outsample_corr_min'] or np.isnan(corr_out):
                 incorrect = True
                 msgs.append("    Out-of-sample correlation less than allowed: got {} expected {}".format(corr_out,outputs['outsample_corr_min']))
             else:
                 points_earned += 1.0
-            if corr_in_50 > outputs['insample_corr_max']:
+            if corr_in_50 > outputs['insample_corr_max'] or np.isnan(corr_in_50):
                 incorrect = True
                 msgs.append("    In-sample correlation with leaf_size=50 greater than allowed: got {} expected {}".format(corr_in_50,outputs['insample_corr_max']))
             else:
