@@ -1,0 +1,11 @@
+===== Best Possible Strategy Stats =====
+Final portfolio value:  678610.0
+Cumulative return:  5.7861
+Std of daily returns:  0.00454782319791
+Mean of daily returns:  0.00381678615086
+
+===== Benchmark Strategy Stats =====
+Final portfolio value:  101230.0
+Cumulative return:  0.0123
+Std of daily returns:  0.0170043662712
+Mean of daily returns:  0.000168086978191
