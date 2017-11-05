@@ -27,7 +27,7 @@ def main():
 
     mtm = momentum(prices, LOOKBACK)
     sma, sma_ratio = simple_moving_average(prices, LOOKBACK)
-    bbands = bollinger_bands(prices, sma)
+    bbands = bollinger_bands(prices, sma, LOOKBACK)
     mfi = money_flow_index(prices, highs, lows, volumes, LOOKBACK)
 
     _save_indicators(
@@ -66,7 +66,7 @@ def simple_moving_average(prices, lookback):
     sma = prices.rolling(window=lookback, min_periods=lookback).mean()
     return sma, _standarize_indicator((prices / sma) - 1)
 
-def bollinger_bands(prices, sma):
+def bollinger_bands(prices, sma, lookback):
     """
     Computes the Bollinger Bands using a specified lookback period
 
@@ -77,7 +77,10 @@ def bollinger_bands(prices, sma):
     Returns:
         - A dataframe for the same period with the standarized Bollinger Bands
     """
-    return _standarize_indicator((prices - sma) / (2. * sma.std()))
+    # Bolling Bands use the rolling standard deviation over the same lookback
+    # period as the rolling mean
+    std = prices.rolling(window=lookback, min_periods=lookback).std()
+    return _standarize_indicator((prices - sma) / (2. * std))
 
 def money_flow_index(prices, highs, lows, volumes, lookback):
     """
@@ -221,8 +224,9 @@ def _generate_plots(dates, lookback, prices, mtm, sma, sma_ratio, bbands, mfi):
 
     # Plot the Bollinger Bands against Prices and SMA for JPM
     # Bollinger Bands that are going to be plotted
-    upper_bband = sma + (2. * sma.std())
-    lower_bband = sma + (-2. * sma.std())
+    std = prices.rolling(window=lookback, min_periods=lookback).std()
+    upper_bband = sma + (2. * std)
+    lower_bband = sma + (-2. * std)
     _plot(
         {
             'data' : [

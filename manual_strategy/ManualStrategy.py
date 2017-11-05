@@ -68,7 +68,7 @@ class ManualStrategy(object):
     def _compute_indicators(prices, highs, lows, volumes, lookback):
         mtm = momentum(prices, lookback)
         sma, sma_ratio = simple_moving_average(prices, lookback)
-        bbands = bollinger_bands(prices, sma)
+        bbands = bollinger_bands(prices, sma, lookback)
         mfi = money_flow_index(prices, highs, lows, volumes, lookback)
 
         return mtm, sma_ratio, bbands, mfi
