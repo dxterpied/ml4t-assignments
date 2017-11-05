@@ -3,6 +3,7 @@ Implements technical indicators as functions that operate on dataframes
 
 Indicators:
 - Momentum
+- Price/SMA ratio
 - Bollinger Bands
 - Money Flow Index
 """
@@ -13,7 +14,7 @@ from util import get_data
 
 def main():
     """Generates the charts that illustrate the indicators"""
-    LOOKBACK = 14
+    LOOKBACK = 10
     SYMBOLS = ['JPM']
 
     date_range = pd.date_range(dt.datetime(2008, 1, 1), dt.datetime(2009, 12, 31))
@@ -25,11 +26,16 @@ def main():
     dates = prices.index
 
     mtm = momentum(prices, LOOKBACK)
-    sma = simple_moving_average(prices, LOOKBACK)
+    sma, sma_ratio = simple_moving_average(prices, LOOKBACK)
     bbands = bollinger_bands(prices, sma)
     mfi = money_flow_index(prices, highs, lows, volumes, LOOKBACK)
 
-    _generate_plots(dates, LOOKBACK, prices, mtm, sma, mfi)
+    _save_indicators(
+        (mtm, sma_ratio, bbands, mfi),
+        ['Momentum', 'SMA', 'BollingerBands', 'MFI']
+    )
+
+    _generate_plots(dates, LOOKBACK, prices, mtm, sma, sma_ratio, bbands, mfi)
 
 def momentum(prices, lookback):
     """
@@ -40,13 +46,14 @@ def momentum(prices, lookback):
         - lookback: The lookback period
 
     Returns:
-        - A dataframe for the same period with the momentum
+        - A dataframe for the same period with the standarized momentum
     """
-    return (prices / prices.shift(lookback)) - 1
+    return _standarize_indicator((prices / prices.shift(lookback)) - 1)
 
 def simple_moving_average(prices, lookback):
     """
     Computes the Simple Moving Average for a specific window
+    and the Price/SMA ratio which is used for technical analysis
 
     Args:
         - prices: A dataframe with prices
@@ -54,8 +61,10 @@ def simple_moving_average(prices, lookback):
 
     Returns:
         - A dataframe for the same period with the SMA
+        - A dataframe for the same period with the Price/SMA standarized ratio
     """
-    return prices.rolling(window=lookback, min_periods=lookback).mean()
+    sma = prices.rolling(window=lookback, min_periods=lookback).mean()
+    return sma, _standarize_indicator((prices / sma) - 1)
 
 def bollinger_bands(prices, sma):
     """
@@ -66,9 +75,9 @@ def bollinger_bands(prices, sma):
         - sma: The SMA
 
     Returns:
-        - A dataframe for the same period with the Bollinger Bands
+        - A dataframe for the same period with the standarized Bollinger Bands
     """
-    return (prices - sma) / (2. * sma.std())
+    return _standarize_indicator((prices - sma) / (2. * sma.std()))
 
 def money_flow_index(prices, highs, lows, volumes, lookback):
     """
@@ -160,52 +169,111 @@ def _get_data(symbols, dates, column):
     data = get_data(symbols, dates, colname=column)
     data.fillna(method='ffill', inplace=True)
     data.fillna(method='bfill', inplace=True)
-    # Normalize the data
-    data = data / data.ix[0, :]
 
     return data
 
-def _generate_plots(dates, lookback, prices, mtm, sma, mfi):
-    # Plot for momentum
+def _standarize_indicator(indicator):
+    return (indicator - indicator.mean()) / indicator.std()
+
+def _save_indicators(indicators, names):
+    for index, indicator in enumerate(indicators):
+        indicator.to_csv("report/indicators/{}.csv".format(names[index]))
+
+def _generate_plots(dates, lookback, prices, mtm, sma, sma_ratio, bbands, mfi):
+    # Plot the prices for JPM
     _plot(
-        [(dates, prices['JPM']), (dates, mtm['JPM'])],
-        'Prices vs {}-day Momentum for JPM'.format(lookback),
-        'Date',
-        'Normalized Price',
-        legend=['Prices', 'Momentum']
+        {
+            'data' : [(dates, prices['JPM'])],
+            'color' : ['blue'],
+            'legend' : ['Prices'],
+            'title' : 'Prices for JPM',
+            'xlabel' : 'Date',
+            'ylabel' : 'Price'
+        },
+        filename='PricesForJPM'
     )
 
-    # Plot for Bollinger Bands
+    # Plot the Price/SMA ratio
+    _plot(
+        {
+            'data' : [(dates, sma_ratio['JPM'])],
+            'color' : ['red'],
+            'legend' : ['Price/SMA Ratio'],
+            'title' : 'Price/SMA Ratio for JPM',
+            'xlabel' : 'Date',
+            'ylabel' : 'Standarized Price/SMA Ratio'
+        },
+        filename='PriceToSMARatioForJPM'
+    )
+
+    # Plot the Momentum for JPM
+    _plot(
+        {
+            'data' : [(dates, mtm['JPM'])],
+            'color' : ['red'],
+            'legend' : ['Momentum'],
+            'title' : '{}-day Momentum for JPM'.format(lookback),
+            'xlabel' : 'Date',
+            'ylabel' : 'Standarized Momentum'
+        },
+        filename='{}-dayMomentumForJPM'.format(lookback)
+    )
+
+    # Plot the Bollinger Bands against Prices and SMA for JPM
     # Bollinger Bands that are going to be plotted
     upper_bband = sma + (2. * sma.std())
     lower_bband = sma + (-2. * sma.std())
     _plot(
-        [
-            (dates, prices['JPM']),
-            (dates, upper_bband['JPM']),
-            (dates, lower_bband['JPM']),
-            (dates, sma['JPM'])
-        ],
-        'Prices vs Bollinger Bands vs {}-day SMA for JPM'.format(lookback),
-        'Date',
-        'Normalized Price',
-        colors=['b', 'r', 'r', 'g'],
-        legend=['Prices', r'$2\sigma$ upper band', r'$2\sigma$ lower band', 'SMA']
+        {
+            'data' : [
+                (dates, prices['JPM']),
+                (dates, upper_bband['JPM']),
+                (dates, lower_bband['JPM']),
+                (dates, sma['JPM'])
+            ],
+            'color' : ['blue', 'red', 'red', 'green'],
+            'legend' : [
+                'Prices',
+                r'$2\sigma$ upper band',
+                r'$2\sigma$ lower band',
+                'SMA'
+            ],
+            'title' : 'Prices vs Bollinger Bands vs {}-day SMA for JPM'.format(lookback),
+            'xlabel' : 'Date',
+            'ylabel' : 'Price'
+        },
+        filename='PricesvsBollingerBandsvs{}-daySMAforJPM'.format(lookback)
+    )
+
+    # Plot Bollinger Band values
+    _plot(
+        {
+            'data' : [(dates, bbands['JPM'])],
+            'color' : ['red'],
+            'legend' : ['Bollinger Band Values'],
+            'title' : 'Bollinger Band Values for JPM',
+            'xlabel' : 'Date',
+            'ylabel' : 'Standarized Bollinger Band Values',
+            'hlines': [(1, '1 - SELL signal'), (-1, '-1 - BUY signal')]
+        },
+        filename='BollingerBandsValuesforJPM'
     )
 
     # Plot for Money Flow Index
     _plot(
-        [
-            (dates, mfi['JPM'])
-        ],
-        '{}-day MFI vs MFI limits for JPM'.format(lookback),
-        'Date',
-        'MFI',
-        legend=['MFI'],
-        hlines=[(80, '80 - Overbought'), (20, '20 - Oversold')]
+        {
+            'data' : [(dates, mfi['JPM'])],
+            'color' : ['red'],
+            'legend' : ['MFI'],
+            'title' : '{}-day MFI for JPM'.format(lookback),
+            'xlabel' : 'Date',
+            'ylabel' : 'MFI',
+            'hlines': [(70, '70 - Overbought'), (30, '30 - Oversold')]
+        },
+        filename='{}-dayMFIforJPM'.format(lookback)
     )
 
-def _plot(data, title, xlabel, ylabel, colors=['b', 'r', 'g'], legend=None, hlines=None):
+def _plot(plot, filename='plot.png'):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
 
@@ -222,28 +290,38 @@ def _plot(data, title, xlabel, ylabel, colors=['b', 'r', 'g'], legend=None, hlin
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y/%m/%d'))
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=2))
 
-    [plt.plot(
-        xdata,
-        ydata,
-        linewidth=2.5,
-        color=colors[index],
-        alpha=0.4,
-        label=legend[index])
-     for index, (xdata, ydata) in enumerate(data)]
+    data = plot['data']
+    color = plot['color']
+    legend = plot['legend']
+    title = plot['title']
+    xlabel = plot['xlabel']
+    ylabel = plot['ylabel']
+    # hlines is optional so it can be None
+    # `get` returns None instead of throwing an error
+    hlines = plot.get('hlines')
 
-    plt.title(title)
-    plt.xlabel(xlabel, fontsize='15')
-    plt.ylabel(ylabel, fontsize='15')
+    for index, (xdata, ydata) in enumerate(data):
+        plt.plot(
+            xdata,
+            ydata,
+            linewidth=2.5,
+            color=color[index],
+            alpha=0.4,
+            label=legend[index]
+        )
 
-    if not hlines is None:
-        [plt.axhline(y=hline, color='black', linewidth=2.5, alpha=0.4, label=label)
-         for hline, label in hlines]
+        plt.title(title)
+        plt.xlabel(xlabel, fontsize='15')
+        plt.ylabel(ylabel, fontsize='15')
 
-    if not legend is None:
+        if not hlines is None:
+            [plt.axhline(y=hline, color='black', linewidth=2.5, alpha=0.4, label=label)
+             for hline, label in hlines]
+
         plt.legend(fontsize='small')
 
     plt.savefig(
-        'report/img/{}.png'.format(title.replace(' ', '')),
+        'report/img/{}.png'.format(filename),
         bbox_inches='tight'
     )
 
