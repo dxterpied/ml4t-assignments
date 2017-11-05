@@ -141,10 +141,10 @@ class ManualStrategy(object):
         # holding a long position (1000 shares). In this case, we don't want to
         # move to a short position immediately since there is no strong indicative
         # of that. We rather want to just close the position to avoid losing money
-        # We identify this trend by:
-        # 1) Yesterday, the price/SMA ratio was above 1 and today, it is less than or exactly 1
+        # We identify this trend by either:
+        # a) Yesterday, the price/SMA ratio was above 1 and today, it is less than or exactly 1
         #    which indicates that the price is regressing down to the SMA
-        # 2) There is a drop in momentum from yesterday to today of more than 50%
+        # b) There is a drop in momentum from yesterday to today of more than 50%
         #    which reinforces the drop identified by the price/SMA ratio
         mtm, sma, _, _ = indicators
 
@@ -155,8 +155,8 @@ class ManualStrategy(object):
         drop_in_momentum = mtm_today < mtm_yesterday and \
                            (mtm_yesterday - mtm_today) / mtm_yesterday > 0.50
 
-        return sma_trending_down and \
-               drop_in_momentum and \
+        return (sma_trending_down or \
+               drop_in_momentum) and \
                current_shares == 1000
 
     @staticmethod
@@ -166,9 +166,9 @@ class ManualStrategy(object):
         # move to a long position immediately since there is no strong indicative
         # of that. We rather want to just close the position to avoid losing money
         # We identify this trend by:
-        # 1) Yesterday, the price/SMA ratio was less than 1 and today, it is above or exactly 1
+        # a) Yesterday, the price/SMA ratio was less than 1 and today, it is above or exactly 1
         #    which indicates that the price is regressing up to the SMA
-        # 2) There is an increase in momentum from yesterday to today of more than 50%
+        # b) There is an increase in momentum from yesterday to today of more than 50%
         #    which reinforces the increase identified by the price/SMA ratio
         mtm, sma, _, _ = indicators
 
@@ -179,8 +179,8 @@ class ManualStrategy(object):
         increase_in_momentum = mtm_today > mtm_yesterday and \
                                (mtm_today - mtm_yesterday) / mtm_yesterday > 0.50
 
-        return sma_trending_up and \
-               increase_in_momentum and \
+        return (sma_trending_up or \
+               increase_in_momentum) and \
                current_shares == -1000
 
     @staticmethod
@@ -236,7 +236,7 @@ def main():
             (trading_dates, manual_port_vals)
         ],
         long_short_data,
-        'Manual Strategy vs Benchmark',
+        'Manual Strategy vs Benchmark - In Sample',
         'Date',
         'Normalized Value',
         colors=['blue', 'black'],
