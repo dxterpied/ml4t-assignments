@@ -480,6 +480,13 @@ class StrategyLearner(object):
         self._indicator_discretizer = IndicatorDiscretizer()
         self._trading_environment = TradingEnvironment()
 
+        self._metadata = {}
+
+    @property
+    def metadata(self):
+        """Returns metadata about this StrategyLearner"""
+        return self._metadata
+
     # this method should create a QLearner, and train it for trading
     def addEvidence(self, symbol = "IBM", \
         sd=dt.datetime(2008,1,1), \
@@ -509,6 +516,7 @@ class StrategyLearner(object):
 
         latest_cumulative_return = -999
         current_cumulative_return = 0
+        episodes = 0
 
         # Run learning episodes until the cumulative return of the strategy has converged
         while np.abs(latest_cumulative_return - current_cumulative_return) > 0.001:
@@ -527,6 +535,11 @@ class StrategyLearner(object):
 
             current_cumulative_return = self._compute_cumulative_return(portfolio_values)
 
+            episodes += 1
+
+        # Keep track of the number of training episodes
+        self._metadata['training_episodes'] = episodes
+
     # this method should use the existing policy and test it against new data
     def testPolicy(self, symbol = "IBM", \
         sd=dt.datetime(2009,1,1), \
@@ -544,6 +557,9 @@ class StrategyLearner(object):
         }
 
         trades = self._trading_environment.run_interaction_episode()
+
+        # Keep track of the total number of entries generated
+        self._metadata['entries'] = self._count_total_number_of_entries(trades)
 
         return trades
 
@@ -565,6 +581,11 @@ class StrategyLearner(object):
 
     def _compute_cumulative_return(self, portfolio_values):
         return (portfolio_values[-1] / portfolio_values[0]) - 1
+
+    def _count_total_number_of_entries(self, trades):
+        # Entries are any trades were the strategy suggests
+        # either going long (positive) or shorting (negative)
+        return trades.values[trades != 0].shape[0]
 
 if __name__=="__main__":
     print "One does not simply think up a strategy"
