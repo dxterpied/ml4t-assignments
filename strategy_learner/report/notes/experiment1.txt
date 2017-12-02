@@ -1,0 +1,40 @@
+===== Overperformed: No seed =====
+ManualStrategy stats
+* final value=147800.0
+* cumulative return=0.478
+
+StrategyLearner stats
+* final value=164620.0
+* cumulative return=0.6462
+
+Benchmark stats
+* final value=101230.0
+* cumulative return=0.0123
+
+===== Overperformed: Seed =====
+Seed: 1481090000
+
+ManualStrategy stats
+* final value=147800.0
+* cumulative return=0.478
+
+StrategyLearner stats
+* final value=164210.0
+* cumulative return=0.6421
+
+Benchmark stats
+* final value=101230.0
+* cumulative return=0.0123
+
+===== Underperformed: No seed =====
+ManualStrategy stats
+* final value=147800.0
+* cumulative return=0.478
+
+StrategyLearner stats
+* final value=137520.0
+* cumulative return=0.3752
+
+Benchmark stats
+* final value=101230.0
+* cumulative return=0.0123
