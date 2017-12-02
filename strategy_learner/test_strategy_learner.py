@@ -7,7 +7,6 @@ __userId__ = "arx3"
 import datetime as dt
 import numpy as np
 import pandas as pd
-import random
 import unittest
 
 from marketsimcode import compute_portvals
@@ -16,8 +15,6 @@ from util import get_data
 
 class StrategyLearnerTest(unittest.TestCase):
     def test_in_sample_for_unknown_symbol(self):
-        np.random.seed(1481090000)
-        random.seed(1481090000)
 
         start_date = dt.datetime(2008,1,1)
         end_date = dt.datetime(2009,12,31)
@@ -38,7 +35,7 @@ class StrategyLearnerTest(unittest.TestCase):
         sl.addEvidence(symbol=symbol, sd=start_date, ed=end_date, sv=start_value)
         trades = sl.testPolicy(symbol=symbol, sd=start_date, ed=end_date, sv=start_value)
 
-        orders = self._generate_orders(trades)
+        orders = self._generate_orders(symbol, trades)
         cumulative_return = self._compute_performance(orders, start_value, impact)
 
         self.assertTrue(cumulative_return > benchmark,
@@ -46,9 +43,6 @@ class StrategyLearnerTest(unittest.TestCase):
                             cumulative_return, benchmark))
 
     def test_in_sample_to_verify_market_impact(self):
-        np.random.seed(1481090000)
-        random.seed(1481090000)
-
         start_date = dt.datetime(2008,1,1)
         end_date = dt.datetime(2009,12,31)
         symbol = 'AMZN'
@@ -83,18 +77,18 @@ class StrategyLearnerTest(unittest.TestCase):
         portfolio_values = compute_portvals(orders, start_val=start_value, commission=0.0, impact=impact)
         return (portfolio_values[-1] / portfolio_values[0]) - 1
 
-    def _generate_orders(self, trades):
+    def _generate_orders(self, symbol, trades):
         # Generate an orders DataFrame as required by my marketsimcode
         orders = pd.DataFrame(index=trades.index, columns=['Order', 'Date', 'Symbol', 'Shares'])
         for index, trade in trades.iterrows():
             shares = trade['Shares']
 
             if shares == 0:
-                orders.loc[index] = ['HOLD', index, 'IBM', shares]
+                orders.loc[index] = ['HOLD', index, symbol, shares]
             elif shares > 0:
-                orders.loc[index] = ['BUY', index, 'IBM', shares]
+                orders.loc[index] = ['BUY', index, symbol, shares]
             else:
-                orders.loc[index] = ['SELL', index, 'IBM', shares * -1]
+                orders.loc[index] = ['SELL', index, symbol, shares * -1]
 
         return orders
 

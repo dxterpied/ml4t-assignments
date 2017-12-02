@@ -322,10 +322,16 @@ class TradingEnvironment(object):
         self._trading_options = trading_options
 
     def run_learning_episode(self):
-        """Runs a single instance of a learning episode"""
+        """Runs a single instance of a learning episode
+
+        Returns:
+            - A DataFrame of orders that should be executed
+        """
         # Our current holding
         holding = None
         trading_dates = self._trading_options['trading_dates']
+        # Holds the orders that the agent decides should be taken
+        orders = pd.DataFrame(index=trading_dates, columns=['Shares'])
 
         # Initialize the learner with the first state for the first day
         state = self._trading_state_factory.create(trading_dates[0])
@@ -345,12 +351,12 @@ class TradingEnvironment(object):
             # Get an action for the state and learn!
             action = self._qlearner.query(state, reward)
             # Execute the action to update our holding position
-            # We ignore the transaction generated for training
-            _, holding = self._execute_action(action, holding)
+            order, holding = self._execute_action(action, holding)
+            orders.loc[date] = order
 
             # Are we done?
             if index == len(trading_dates) - 1:
-                return
+                return orders
 
             # Get the next state (i.e. for tomorrow) if we are not done
             state = self._trading_state_factory.create(trading_dates[index + 1])
@@ -501,15 +507,25 @@ class StrategyLearner(object):
             'impact': self.impact
         }
 
-        latest_qtable = np.ones_like(self._learner.qtable)
+        latest_cumulative_return = -999
+        current_cumulative_return = 0
 
-        # The norm of two vectors can be used to compute the distance of said
-        # vectors, see: https://tinyurl.com/p248vwg
-        # This distance indicates how much the Q-values have changed and thus
-        # can be used to measure convergence
-        while np.linalg.norm(latest_qtable - self._learner.qtable) > 0.001:
-            latest_qtable = self._learner.qtable.copy()
-            self._trading_environment.run_learning_episode()
+        # Run learning episodes until the cumulative return of the strategy has converged
+        while np.abs(latest_cumulative_return - current_cumulative_return) > 0.001:
+            latest_cumulative_return = current_cumulative_return
+
+            trades = self._trading_environment.run_learning_episode()
+            orders = self._convert_trades_to_marketisim_orders(symbol, trades)
+
+            portfolio_values = compute_portvals(
+                orders,
+                start_val=sv,
+                commission=0.,
+                impact=self.impact,
+                prices=stock_data.price.copy(),
+            )
+
+            current_cumulative_return = self._compute_cumulative_return(portfolio_values)
 
     # this method should use the existing policy and test it against new data
     def testPolicy(self, symbol = "IBM", \
@@ -531,29 +547,24 @@ class StrategyLearner(object):
 
         return trades
 
+    def _convert_trades_to_marketisim_orders(self, symbol, trades):
+        # Convert the trades into the format expected by my marketsimcode.py
+        orders = pd.DataFrame(index=trades.index, columns=['Order', 'Date', 'Symbol', 'Shares'])
+
+        for index, trade in trades.iterrows():
+            shares = trade['Shares']
+
+            if shares == 0:
+                orders.loc[index] = ['HOLD', index, symbol, shares]
+            elif shares > 0:
+                orders.loc[index] = ['BUY', index, symbol, shares]
+            else:
+                orders.loc[index] = ['SELL', index, symbol, shares * -1]
+
+        return orders
+
+    def _compute_cumulative_return(self, portfolio_values):
+        return (portfolio_values[-1] / portfolio_values[0]) - 1
+
 if __name__=="__main__":
-    # print "One does not simply think up a strategy"
-    sl = StrategyLearner()
-
-    print "===== Running addEvidence ===="
-    sl.addEvidence()
-
-    print "\n===== Running testPolicy ====="
-    trades = sl.testPolicy()
-
-    # Convert the trades into the format expected by my marketsimcode.py
-    orders = pd.DataFrame(index=trades.index, columns=['Order', 'Date', 'Symbol', 'Shares'])
-    for index, trade in trades.iterrows():
-        shares = trade['Shares']
-
-        if shares == 0:
-            orders.loc[index] = ['HOLD', index, 'IBM', shares]
-        elif shares > 0:
-            orders.loc[index] = ['BUY', index, 'IBM', shares]
-        else:
-            orders.loc[index] = ['SELL', index, 'IBM', shares * -1]
-
-    # Evaluate the strategy
-    portfolio_values = compute_portvals(orders, 10000, commission=0.0, impact=0.005)
-
-    print "Out-of-sample cumulative return: {}".format((portfolio_values[-1] / portfolio_values[0]) - 1)
+    print "One does not simply think up a strategy"

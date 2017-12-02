@@ -9,7 +9,7 @@ __userId__ = "arx3"
 import pandas as pd
 from util import get_data
 
-def compute_portvals(orders, start_val=1000000, commission=9.95, impact=0.005):
+def compute_portvals(orders, start_val=1000000, commission=9.95, impact=0.005, prices=None):
     """
     Computes the daily portfolio values by simulating the execution of trade orders
 
@@ -20,6 +20,8 @@ def compute_portvals(orders, start_val=1000000, commission=9.95, impact=0.005):
         - start_val: Starting cash of the portfolio. Defaults to 1,000,000
         - commission: The commission to apply per transaction. Defaults to 9.95
         - impact: The impact of the market in the stocks. Defaults to 0.005
+        - prices: An optional DataFrame of prices. If provided, then the
+                  data will not be retrieved again. Defaults to None
 
     Returns:
         - A dataframe with the daily portfolio values
@@ -34,7 +36,11 @@ def compute_portvals(orders, start_val=1000000, commission=9.95, impact=0.005):
 
     symbols = _extract_stock_symbols(orders)
 
-    prices = _get_stock_prices_with_cash(symbols, start_date, end_date)
+    if prices is not None:
+        # Just add the Cash column
+        prices['Cash'] = 1.
+    else:
+        prices = _get_stock_prices_with_cash(symbols, start_date, end_date)
 
     portvals = _run_market_simulation(prices, orders, start_val, commission, impact)
 
