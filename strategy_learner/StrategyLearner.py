@@ -159,7 +159,6 @@ class IndicatorDiscretizer(object):
     def money_flow_index(self, mfi):
         """Discretizes the Money Flow Index indicator"""
         # Typical range for mfi: 0 to 100
-        # TODO: Consider using 10 buckets instead
         # Four buckets
         # 1. x < 30 (oversold bucket)
         # 2. 30 <= x <= 70 (no indication)
